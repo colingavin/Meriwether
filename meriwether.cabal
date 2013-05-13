@@ -1,0 +1,20 @@
+name:           meriwether
+version:        0.1
+synopsis:       A general game player.
+author:         Colin Gavin <colingavin@lclark.edu>
+build-type:     Simple
+cabal-version:  >= 1.9.2
+
+Test-Suite test-meriwether
+    type:           exitcode-stdio-1.0
+    hs-source-dirs: src
+    main-is:        Meriwether/Test/Runner.hs
+    build-depends:  base, HUnit, parsec
+    other-modules:  Meriwether.GDL.Model
+                    Meriwether.GDL.Parser
+                    Meriwether.GDL.Test
+
+executable app
+    hs-source-dirs: src
+    main-is:        Meriwether/App/Main.hs
+    build-depends:  base

@@ -1,0 +1,6 @@
+# Standard stuff
+.DS_Store
+*.hi
+
+# Project specific
+dist/
