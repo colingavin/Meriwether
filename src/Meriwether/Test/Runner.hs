@@ -10,7 +10,7 @@ allTests :: Test
 allTests = TestList [TestLabel "GDL" GDL.unitTests]
 
 main = do
-    counts <- runTestTT allTests
-    if failures counts > 0
+    results <- runTestTT allTests
+    if (failures results > 0) || (errors results > 0)
         then exitFailure
         else exitSuccess

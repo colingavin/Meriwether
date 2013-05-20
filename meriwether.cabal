@@ -9,12 +9,16 @@ Test-Suite test-meriwether
     type:           exitcode-stdio-1.0
     hs-source-dirs: src
     main-is:        Meriwether/Test/Runner.hs
-    build-depends:  base, HUnit, parsec
+    build-depends:  base, HUnit, parsec, logict, mtl
     other-modules:  Meriwether.GDL.Model
                     Meriwether.GDL.Parser
+                    Meriwether.GDL.Substitution
+                    Meriwether.GDL.Unification
+                    Meriwether.GDL.Query
                     Meriwether.GDL.Test
 
 executable app
     hs-source-dirs: src
     main-is:        Meriwether/App/Main.hs
-    build-depends:  base
+    build-depends:  base, HUnit, parsec
+    other-modules: Meriwether.GDL.Model

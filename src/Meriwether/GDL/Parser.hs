@@ -1,6 +1,6 @@
 module Meriwether.GDL.Parser (
-    parseGDL
-    ) where
+  parseGDL
+  ) where
 
 -- System
 import Control.Monad
@@ -14,69 +14,92 @@ import Meriwether.GDL.Model
 
 -- Interface
 
-parseGDL :: String -> Either ParseError GDLDocument
+
+parseGDL :: String -> Either ParseError [Expression]
 parseGDL input = parse documentP "" input
 
 
 -- Parser chain
 
-documentP :: Parser GDLDocument
+documentP :: Parser [Expression]
 documentP = do
-    -- Skip any comments or spaces at the beginning of the document
-    skipMany spaces >> commentP
-    -- Parse expressions separated by spaces and optionally comments
-    sepEndBy expressionP (spaces >> commentP)
-
-expressionP :: Parser GDLExpression
-expressionP = constP <|> varP <|> (try notP) <|> (try andP) <|> (try impliesP) <|> sentenceP
+  -- Skip any comments or spaces at the beginning of the document
+  skipMany space >> commentP
+  -- Parse expressions separated by spaces and optionally comments
+  sepEndBy expressionP (spaces >> commentP)
 
 commentP :: Parser ()
 commentP = optional $ do 
-    string ";"
-    manyTill anyChar newline
-    return ()
+  string ";"
+  manyTill anyChar newline
+  return ()
 
-constP :: Parser GDLExpression
-constP = liftM GDLConst $ many1 $ letter <|> digit <|> char '_'
+expressionP :: Parser Expression
+expressionP = (InferenceRule `liftM` try ruleP) <|>
+              (Ground `liftM` atomP)
 
-varP :: Parser GDLExpression
-varP = char '?' >> (liftM GDLVar $ many letter)
+ruleP :: Parser Rule
+ruleP = do
+  char '(' >> spaces >> string "<=" >> spaces
+  conclusion <- atomP
+  spaces
+  predicates <- literalP `sepBy1` spaces
+  spaces >> char ')'
+  return $ conclusion :- predicates
 
-notP :: Parser GDLExpression
-notP = do
-    char '(' >> spaces >> string "not" >> spaces
-    arg <- expressionP
-    spaces >> char ')'
-    return $ GDLNot arg
+atomP :: Parser Atom
+atomP = propP <|> relationP
 
+literalP :: Parser Literal
+literalP = (try negationP) <|>
+           (try distinctP) <|>
+           (Pos `liftM` atomP)
 
-andP :: Parser GDLExpression
-andP = do
-    char '(' >> spaces >> string "and" >> spaces
-    arg1 <- expressionP
-    spaces
-    arg2 <- expressionP
-    spaces >> char ')'
-    return $ GDLAnd arg1 arg2
+propP :: Parser Atom
+propP = Proposition `liftM` nameP
 
+relationP :: Parser Atom
+relationP = do
+  char '(' >> spaces
+  name <- nameP
+  spaces
+  terms <- termP `sepBy` spaces
+  spaces >> char ')'
+  return $ Relation name terms
 
-impliesP :: Parser GDLExpression
-impliesP = do
-    char '(' >> spaces >> string "<=" >> spaces
-    conclusion <- expressionP
-    spaces
-    hypos <- expressionP `sepBy1` spaces
-    spaces >> char ')'
-    if length hypos > 1
-        then return $ GDLImplies (foldr1 GDLAnd hypos) conclusion
-        else return $ GDLImplies (head hypos) conclusion
+negationP :: Parser Literal
+negationP = do
+  char '(' >> spaces >> string "not" >> spaces
+  arg <- atomP
+  spaces >> char ')'
+  return $ Neg arg
 
+distinctP :: Parser Literal
+distinctP = do
+  char '(' >> spaces >> string "distinct" >> spaces
+  a <- termP
+  spaces
+  b <- termP
+  spaces >> char ')'
+  return $ Distinct a b
 
-sentenceP :: Parser GDLExpression
-sentenceP = do
-    char '(' >> spaces
-    headExpr <- expressionP
-    spaces
-    bodyExprs <- expressionP `sepBy` spaces
-    spaces >> char ')'
-    return $ GDLSentence headExpr bodyExprs
+termP :: Parser Term
+termP = varP <|> constP <|> functionP
+
+varP :: Parser Term
+varP = char '?' >> (Var `liftM` nameP)
+
+constP :: Parser Term
+constP = Const `liftM`  nameP
+
+functionP :: Parser Term
+functionP = do
+  char '(' >> spaces
+  name <- nameP
+  spaces
+  terms <- termP `sepBy` spaces
+  spaces >> char ')'
+  return $ Function name terms
+
+nameP :: Parser Name
+nameP = many1 $ letter <|> digit <|> char '_'
